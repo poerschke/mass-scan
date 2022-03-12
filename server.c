@@ -28,7 +28,7 @@ const int  queue_s = 100000;
 
 void parser2(char *string);
 int socket_connect(char *host, in_port_t port);
-int split(char *str);
+int split(char *str, char *id);
 void head(char *host, int port, char *server);
 void *worker(void *arg);
 void grava(char arquivo[], char ip[], int porta, char server[]);
@@ -37,7 +37,7 @@ void grava(char arquivo[], char ip[], int porta, char server[]);
 
 char *server = "localhost";
 char *user = "root";
-char *password = ""; /* set me first */
+char *password = "Naotem12!"; /* set me first */
 char *database = "dados";
 
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
         int z,i;
         char str[500];
         char ip[30];
-        char lista[6000][30];
+        char lista[20000][30];
         void *buffer[queue_s];
         queue_t queue = QUEUE_INITIALIZER(buffer);
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
 
 
 
-       sprintf(str, "SELECT ip, porta FROM ips WHERE checado IS NULL ORDER BY id ASC LIMIT 5000");
+       sprintf(str, "SELECT id, ip, porta FROM ips WHERE checado IS NULL ORDER BY id ASC LIMIT 15000");
 
         if (mysql_query(conn, str)) {
                 fprintf(stderr, "%s\n", mysql_error(conn));
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]){
         res = mysql_use_result(conn);
         i=0;
         while ((row = mysql_fetch_row(res)) != NULL){
-                sprintf(lista[i],"%s:%s", row[0], row[1]);
+                sprintf(lista[i],"%s:%s:%s", row[0], row[1], row[2]);
                 queue_enqueue(&queue, lista[i]);
                 i++;
         }
@@ -102,7 +102,6 @@ int main(int argc, char *argv[]){
             }
         }
         else{
-                printf("Sem ips no banco de dados\n");
 
         }
 
@@ -199,6 +198,7 @@ void *worker(void *arg){
         char *line;
         int port;
         char sql[1000];
+        char id[11];
         MYSQL *conn;
         MYSQL_RES *res;
         MYSQL_ROW row;
@@ -216,19 +216,19 @@ void *worker(void *arg){
 //      line = (char *)malloc(40 * sizeof(char));
 
         while(queue_size(arg) > 0){
+            //printf("falta: %d\n", queue_size(arg));
             line = queue_dequeue(arg);
-            port = split(line);
+            port = split(line, id);
             head(line, port, server);
 
             if(strlen(line) > 6){
-
-                        sprintf(sql, "UPDATE ips SET checado = 1, server = '%s' WHERE ip = '%s' AND porta = %d", server, line, port);
+                        printf("%s:%d %s\n", line, port, server);
+                        sprintf(sql, "UPDATE ips SET checado = 1, server = '%s' WHERE id = %d", server, atoi(id));
                         if (mysql_query(conn, sql)) {
                                 fprintf(stderr, "%s\n", mysql_error(conn));
                                 exit(1);
                         }
 
-                        printf("http://%s:%d/|%s\n", line, port, server );
                 }
 
 
@@ -294,11 +294,33 @@ int socket_connect(char *host, in_port_t port){
 
 
 
+int split(char *str, char *id){
+        int x;
+        int i;
+        char ip[30];
+        char porta[7];
 
-int split(char *str){
-        char *token;
-        char *search = ":";
-        str = strtok(str, search);
-        return atoi(strtok(NULL, search));
+        for(x=0;str[x] != ':'; x++){
+                id[x] = str[x];
+        }
+
+        id[++x] = '\0';
+
+        i=0;
+        for(x; str[x] != ':';x++){
+                ip[i] = str[x];
+                i++;
+        }
+        ip[i] = '\0';
+
+        i=0;
+        for(++x; x<strlen(str);x++){
+                porta[i] = str[x];
+                i++;
+        }
+
+        porta[i] = '\0';
+        strcpy(str, ip);
+
+        return atoi(porta);
 }
-
