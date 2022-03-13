@@ -37,7 +37,7 @@ void grava(char arquivo[], char ip[], int porta, char server[]);
 
 char *server = "localhost";
 char *user = "root";
-char *password = "Naotem12!"; /* set me first */
+char *password = ""; /* set me first */
 char *database = "dados";
 
 
